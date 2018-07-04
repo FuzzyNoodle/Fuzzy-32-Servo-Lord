@@ -25,7 +25,11 @@ void setup()
 	Wire.setClock(400000); //set i2c frequency to 400k hz
 
 	ServoController.init(); //required
-	ServoController.setPrescale(121);
+	ServoController.setClockFrequency(27102244, 27380892);
+	ServoController.setUpdateFrequency(50);
+
+
+	//ServoController.setPrescale(121);
 	//ServoController.setPrescale(0x79,0x79);//may be required, measured value. Default value is 0x1A for both chips.
 	//ServoController.setPulseWidthCorrection(4, -53);//required, values need to be measured by an oscilloscope. It differs from chip to chip. 
 

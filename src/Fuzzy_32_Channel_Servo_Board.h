@@ -76,6 +76,11 @@ class FuzzyServoBoard
 		void setEnvironmentTemperature(uint8_t degreesInCelsius); //set current temperature for temperature correction
 		void setChannelStaggering(bool value); //if set true, output channels will stagger (phase shift) by the amout of time (us) defined in CHANNEL_OFFSET_STEP
 		float getNominalUpdateFrequency(uint32_t clockFrequency, uint8_t prescale);
+		void setClockFrequency(float clock1, float clock2);
+		void setUpdateFrequency(float updateFrequency1, float updateFrequency2);
+		void setUpdateFrequency(float updateFrequency);
+		uint8_t getCalculatedPrescale(float calculatedClockFrequency, float targetUpdateFrequency);
+		
 
 	private:
 		uint8_t _i2cAddress1 = 0x40;
@@ -93,7 +98,6 @@ class FuzzyServoBoard
 		void writeRegisterAll(uint8_t registerAddress, uint8_t value); //write to both chips using all call address
 		void _setPWM(uint8_t servoChannel, uint16_t on, uint16_t off);
 		void _setPWMAll(uint16_t on, uint16_t off);
-		uint8_t calculatePrescale(uint32_t clockFrequency, uint32_t targetUpdateFrequency);
 		
 
 		uint16_t channelOffset[POPULATED_CHANNEL_NUMBER]; //array starts from index 0, servo channel starts from index 1

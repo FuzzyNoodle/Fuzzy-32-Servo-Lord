@@ -29,14 +29,6 @@ void FuzzyServoBoard::init(uint32_t clock1, uint32_t clock2, uint32_t targetUpda
 	//set default prescale value. may be different from chip to chip.
 	//setPrescale(PCA9685_DEFAULT_PRESCALE_VALUE);
 
-	uint8_t p1 = calculatePrescale(NOMINAL_CLOCK_FREQUENCY, 60);
-	Serial.print("Prescale for clock ");
-	Serial.print(NOMINAL_CLOCK_FREQUENCY);
-	Serial.print(" update frequency ");
-	Serial.print(60);
-	Serial.print(" = ");
-	Serial.println(p1);
-
 	setChannelStaggering(DEFAULT_CHANNEL_STAGGERING);
 	for (uint8_t servoChannel = 1; servoChannel <= POPULATED_CHANNEL_NUMBER; servoChannel++)
 	{
@@ -51,11 +43,30 @@ void FuzzyServoBoard::init(uint32_t clock1, uint32_t clock2, uint32_t targetUpda
 
 }
 
-uint8_t FuzzyServoBoard::calculatePrescale(uint32_t clockFrequency, uint32_t targetUpdateFrequency)
+void FuzzyServoBoard::setClockFrequency(float clock1, float clock2)
+{
+	_clock1 = clock1;
+	_clock2 = clock2;
+
+}
+
+void FuzzyServoBoard::setUpdateFrequency(float updateFrequency1, float updateFrequency2)
+{
+	uint8_t prescale1 = getCalculatedPrescale(_clock1, updateFrequency1);
+	uint8_t prescale2 = getCalculatedPrescale(_clock2, updateFrequency2);
+
+}
+
+void FuzzyServoBoard::setUpdateFrequency(float updateFrequency)
+{
+	setUpdateFrequency(updateFrequency, updateFrequency);
+}
+
+uint8_t FuzzyServoBoard::getCalculatedPrescale(float calculatedClockFrequency, float targetUpdateFrequency)
 {
 	//rounding method from here: https://github.com/adafruit/Adafruit-PWM-Servo-Driver-Library/issues/40
 	uint32_t calculatedPrescale;
-	calculatedPrescale = clockFrequency * 100 / (targetUpdateFrequency << 12);
+	calculatedPrescale = calculatedClockFrequency * 100 / (4096 * targetUpdateFrequency);
 	if ((calculatedPrescale % 100) >= 50) calculatedPrescale += 100;
 	calculatedPrescale = (calculatedPrescale / 100) - 1;
 	return (uint8_t)calculatedPrescale;

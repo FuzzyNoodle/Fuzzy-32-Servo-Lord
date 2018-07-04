@@ -1,0 +1,94 @@
+Port open
+Fuzzy 32 Channel Servo Board
+*** Chip Frequency Calibrator *** example started.
+Running first pass using default prescale...
+Getting calculated clock frequency for chip 1
+Prescale = 26
+Samples = 500
+Progress .......... Done
+Period Count = 500
+Duration(us) = 2040108
+Period(us) = 4080.22
+Measured update frequency = 245.09
+Calculated clock frequency = 27104446
+Frequency error = 8.42%
+Resolution = 1.00 microseconds
+
+Now running second pass...
+Using target update frequency of 50.00 Hz
+Resetting prescale = 131
+Verifying result...
+Getting calculated clock frequency for chip 1
+Prescale = 131
+Samples = 500
+Progress ............ Done
+Period Count = 500
+Duration(us) = 9974516
+Period(us) = 19949.03
+Measured update frequency = 50.13
+Calculated clock frequency = 27102670
+Frequency error = 8.41%
+Resolution = 4.87 microseconds
+
+Now running third pass...
+Getting calculated clock frequency for chip 1
+Prescale = 131
+Samples = 500
+Progress ........... Done
+Period Count = 500
+Duration(us) = 9974672
+Period(us) = 19949.34
+Measured update frequency = 50.13
+Calculated clock frequency = 27102244
+Frequency error = 8.41%
+Resolution = 4.87 microseconds
+
+Running first pass using default prescale...
+Getting calculated clock frequency for chip 2
+Prescale = 26
+Samples = 500
+Progress ........... Done
+Period Count = 500
+Duration(us) = 2028520
+Period(us) = 4057.04
+Measured update frequency = 246.49
+Calculated clock frequency = 27259282
+Frequency error = 9.04%
+Resolution = 0.99 microseconds
+
+Now running second pass...
+Using target update frequency of 50.00 Hz
+Resetting prescale = 132
+Verifying result...
+Getting calculated clock frequency for chip 2
+Prescale = 132
+Samples = 500
+Progress ........... Done
+Period Count = 500
+Duration(us) = 9947364
+Period(us) = 19894.73
+Measured update frequency = 50.26
+Calculated clock frequency = 27382530
+Frequency error = 9.53%
+Resolution = 4.86 microseconds
+
+Now running third pass...
+Getting calculated clock frequency for chip 2
+Prescale = 133
+Samples = 500
+Progress .......... Done
+Period Count = 500
+Duration(us) = 10022756
+Period(us) = 20045.51
+Measured update frequency = 49.89
+Calculated clock frequency = 27380892
+Frequency error = 9.52%
+Resolution = 4.89 microseconds
+
+Now printing final results...
+*******************************************
+Use the following values for calibration:
+Chip 1 clock frequency = 27102244
+Chip 2 clock frequency = 27380892
+*******************************************
+Sketch ended.
