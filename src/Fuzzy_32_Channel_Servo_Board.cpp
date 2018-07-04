@@ -54,7 +54,7 @@ void FuzzyServoBoard::setUpdateFrequency(float updateFrequency1, float updateFre
 {
 	uint8_t prescale1 = getCalculatedPrescale(_clock1, updateFrequency1);
 	uint8_t prescale2 = getCalculatedPrescale(_clock2, updateFrequency2);
-
+	
 }
 
 void FuzzyServoBoard::setUpdateFrequency(float updateFrequency)
