@@ -14,9 +14,9 @@
 	#include "WProgram.h"
 #endif
 
-/*Debug switch. Enable the SERIAL_DEBUG to output debug messages.*/
-//#define SERIAL_DEBUG
-
+/*Debug switch. */
+#define SERIAL_DEBUG //Enable the SERIAL_DEBUG to output debug messages other than servo position setting.
+//#define VERBOSE_SERIAL_DEBUG //This debug switch enables debug messages for servo position setting
 
 //chip registers and default values
 #define PCA9685_CHIP_1 1
@@ -63,33 +63,34 @@ class FuzzyServoBoard
 {
 	public:
 		FuzzyServoBoard();
-		void init();  //required function call to initialize the board
-		void init(uint32_t clock1, uint32_t clock2, uint32_t targetUpdateFrequency); //use clock frequency as input parameter. clock frequency requires measurement, from calibration sketch.
-		void setPWM(uint8_t servoChannel, uint16_t length);
+		void begin();  //required function call to initialize the board
+		void begin(uint32_t clock1, uint32_t clock2, uint32_t targetUpdateFrequency); //use clock frequency as input parameter. clock frequency requires measurement, from calibration sketch.
+		void setPWM(uint8_t servoChannel, uint16_t targetLength);
 		void setOutputAll(bool value);
 		void setOutput(uint8_t servoChannel, bool value); //set output to on or off
 		void setPWMAll(uint16_t length);
 		void setPrescale(uint8_t value1, uint8_t value2); //write to both chips
 		void setPrescale(uint8_t value); //write to both chips using the same value
 		uint8_t getPrescale(uint8_t chipNumber);
-		void setPulseWidthCorrection(int8_t value1, int8_t value2); //fine tune of output length
 		void setEnvironmentTemperature(uint8_t degreesInCelsius); //set current temperature for temperature correction
 		void setChannelStaggering(bool value); //if set true, output channels will stagger (phase shift) by the amout of time (us) defined in CHANNEL_OFFSET_STEP
 		float getNominalUpdateFrequency(uint32_t clockFrequency, uint8_t prescale);
-		void setClockFrequency(float clock1, float clock2);
-		void setUpdateFrequency(float updateFrequency1, float updateFrequency2);
-		void setUpdateFrequency(float updateFrequency);
-		uint8_t getCalculatedPrescale(float calculatedClockFrequency, float targetUpdateFrequency);
-		
+		void setClockFrequency(uint32_t clock1, uint32_t clock2);
+		void setUpdateFrequency(float targetUpdateFrequency1, float targetUpdateFrequency2);
+		void setUpdateFrequency(float targetUpdateFrequency);
+		uint8_t getCalculatedPrescale(uint32_t calculatedClockFrequency, float targetUpdateFrequency);
+		float getCalculatedUpdateFrequency(uint8_t chipNumber, uint8_t prescale);
+		float getCalculatedUpdateFrequency(uint8_t chipNumber);
+		uint16_t getCalbratedSteps(uint8_t chipNumber,uint16_t targetLength);
+		float getCalculatedResolution(uint8_t chipNumber);
 
 	private:
 		uint8_t _i2cAddress1 = 0x40;
 		uint8_t _i2cAddress2 = 0x41;
-		uint32_t _chip1CalbratedClockFrequency = NOMINAL_CLOCK_FREQUENCY; //calibrated to 25 degree C
-		uint32_t _chip2CalbratedClockFrequency = NOMINAL_CLOCK_FREQUENCY;//calibrated to 25 degree C
-		uint16_t _calculatedUpdateFrequency;
+		float _calculatedUpdateFrequency1, _calculatedUpdateFrequency2;
 		uint32_t _clock1, _clock2;
-		uint32_t _targetUpdateFrequency;
+		float _targetUpdateFrequency1, _targetUpdateFrequency2;
+		float _calculatedResolution1, _calculatedResolution2;
 		
 		void reset();//reset both chips
 		uint8_t readRegister(uint8_t chipNumber, uint8_t registerAddress);
@@ -98,21 +99,8 @@ class FuzzyServoBoard
 		void writeRegisterAll(uint8_t registerAddress, uint8_t value); //write to both chips using all call address
 		void _setPWM(uint8_t servoChannel, uint16_t on, uint16_t off);
 		void _setPWMAll(uint16_t on, uint16_t off);
-		
-
 		uint16_t channelOffset[POPULATED_CHANNEL_NUMBER]; //array starts from index 0, servo channel starts from index 1
 
-		/*pulseWidthCorrection1 and pulseWidthCorrection2 are used to make frequency adjustments on chip 1 and 2.
-		It is expressed in percentage * 100. For example, pulseWidthCorrection1 = -50 means the
-		measured period (i.e. 4116.48us) is longer than nominated (should be 4096us) by 0.50%
-		and needs to be shortened by -0.50%.
-		As result, pulse length needs to be shortened by pulse length/4096 * -0.50%.
-		The correction value is expressed in int8_t, from -128~+127, represents -1.28% to +1.27% adjustment range.
-
-		Correction value = (1- measured period/4096)*10000
-		*/
-		int8_t pulseWidthCorrection1 = 0;
-		int8_t pulseWidthCorrection2 = 0;
 		/* The measured temperate variation is about 6us reduction when chip
 		temperature increase by 30 degrees C at 1500us. So this correction is applied if
 		setEnvironmentTemperature(uint8_t degreesInCelsius) is called and different from
@@ -122,7 +110,7 @@ class FuzzyServoBoard
 		*/
 		int8_t deltaTemperature = 0;
 		int8_t temperatureCorrection = DEFAULT_TEMPERATURE_CORRECTION;
-		int8_t getAdjustValue(uint8_t chipNumber, uint16_t length);
+		
 		uint16_t lastLength[POPULATED_CHANNEL_NUMBER];
 };
 

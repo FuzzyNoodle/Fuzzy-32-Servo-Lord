@@ -13,12 +13,12 @@ FuzzyServoBoard::FuzzyServoBoard()
 
 }
 
-void FuzzyServoBoard::init()
+void FuzzyServoBoard::begin()
 {
-	init(NOMINAL_CLOCK_FREQUENCY, NOMINAL_CLOCK_FREQUENCY, DEFAULT_UPDATE_FREQUENCY);
+	begin(NOMINAL_CLOCK_FREQUENCY, NOMINAL_CLOCK_FREQUENCY, DEFAULT_UPDATE_FREQUENCY);
 }
 
-void FuzzyServoBoard::init(uint32_t clock1, uint32_t clock2, uint32_t targetUpdateFrequency)
+void FuzzyServoBoard::begin(uint32_t clock1, uint32_t clock2, uint32_t targetUpdateFrequency)
 {
 	reset();
 
@@ -43,18 +43,52 @@ void FuzzyServoBoard::init(uint32_t clock1, uint32_t clock2, uint32_t targetUpda
 
 }
 
-void FuzzyServoBoard::setClockFrequency(float clock1, float clock2)
+void FuzzyServoBoard::setClockFrequency(uint32_t clock1, uint32_t clock2)
 {
+	#ifdef SERIAL_DEBUG
+	Serial.print("Set calibrated clock value  ");
+	Serial.print(clock1);
+	Serial.print(" ");
+	Serial.print(clock2);
+	Serial.println();
+	#endif //SERIAL_DEBUG
 	_clock1 = clock1;
 	_clock2 = clock2;
-
 }
 
-void FuzzyServoBoard::setUpdateFrequency(float updateFrequency1, float updateFrequency2)
+void FuzzyServoBoard::setUpdateFrequency(float targetUpdateFrequency1, float targetUpdateFrequency2)
 {
-	uint8_t prescale1 = getCalculatedPrescale(_clock1, updateFrequency1);
-	uint8_t prescale2 = getCalculatedPrescale(_clock2, updateFrequency2);
-	
+	#ifdef SERIAL_DEBUG
+	Serial.print("Set target update frequency  ");
+	Serial.print(targetUpdateFrequency1);
+	Serial.print(" ");
+	Serial.print(targetUpdateFrequency2);
+	Serial.println();
+	#endif //SERIAL_DEBUG
+
+	_targetUpdateFrequency1 = targetUpdateFrequency1;
+	_targetUpdateFrequency2 = targetUpdateFrequency2;
+	uint8_t prescale1 = getCalculatedPrescale(_clock1, _targetUpdateFrequency1);
+	uint8_t prescale2 = getCalculatedPrescale(_clock2, _targetUpdateFrequency2);
+	setPrescale(prescale1, prescale2);
+
+	_calculatedUpdateFrequency1 = getCalculatedUpdateFrequency(PCA9685_CHIP_1);
+	_calculatedUpdateFrequency2 = getCalculatedUpdateFrequency(PCA9685_CHIP_2);
+
+	_calculatedResolution1 = 1000000.0 / (_calculatedUpdateFrequency1 * 4096);
+	_calculatedResolution2 = 1000000.0 / (_calculatedUpdateFrequency2 * 4096);
+
+	#ifdef SERIAL_DEBUG
+	Serial.print("Calculated update frequency = ");
+	Serial.print(_calculatedUpdateFrequency1);
+	Serial.print(" ");
+	Serial.println(_calculatedUpdateFrequency2);
+
+	Serial.print("Calculated resolution = ");
+	Serial.print(_calculatedResolution1);
+	Serial.print(" ");
+	Serial.println(_calculatedResolution2);
+	#endif //SERIAL_DEBUG
 }
 
 void FuzzyServoBoard::setUpdateFrequency(float updateFrequency)
@@ -62,41 +96,99 @@ void FuzzyServoBoard::setUpdateFrequency(float updateFrequency)
 	setUpdateFrequency(updateFrequency, updateFrequency);
 }
 
-uint8_t FuzzyServoBoard::getCalculatedPrescale(float calculatedClockFrequency, float targetUpdateFrequency)
+uint8_t FuzzyServoBoard::getCalculatedPrescale(uint32_t calculatedClockFrequency, float targetUpdateFrequency)
 {
 	//rounding method from here: https://github.com/adafruit/Adafruit-PWM-Servo-Driver-Library/issues/40
 	uint32_t calculatedPrescale;
-	calculatedPrescale = calculatedClockFrequency * 100 / (4096 * targetUpdateFrequency);
+	calculatedPrescale = (float)calculatedClockFrequency * 100.0 / (4096.0 * targetUpdateFrequency);
 	if ((calculatedPrescale % 100) >= 50) calculatedPrescale += 100;
 	calculatedPrescale = (calculatedPrescale / 100) - 1;
 	return (uint8_t)calculatedPrescale;
 }
 
-void FuzzyServoBoard::setPWM(uint8_t servoChannel, uint16_t commandedLength)
+float FuzzyServoBoard::getCalculatedUpdateFrequency(uint8_t chipNumber, uint8_t prescale)
 {
-	#ifdef SERIAL_DEBUG
-	Serial.print("Commanded ");
-	Serial.print(commandedLength);
+	float calculatedUpdateFrequency;
+	float calculatedClockFrequency;
+	if (chipNumber == PCA9685_CHIP_1) calculatedClockFrequency = _clock1;
+	if (chipNumber == PCA9685_CHIP_2) calculatedClockFrequency = _clock2;
+	calculatedUpdateFrequency = calculatedClockFrequency / (float)(((uint32_t)prescale + 1) << 12);
+	return calculatedUpdateFrequency;
+}
+
+float FuzzyServoBoard::getCalculatedUpdateFrequency(uint8_t chipNumber)
+{
+	float calculatedUpdateFrequency;
+	uint8_t prescale;
+	prescale = getPrescale(chipNumber);
+	calculatedUpdateFrequency = getCalculatedUpdateFrequency(chipNumber, prescale);
+	return calculatedUpdateFrequency;
+}
+
+uint16_t FuzzyServoBoard::getCalbratedSteps(uint8_t chipNumber,uint16_t targetLength)
+{
+	uint16_t steps;
+	if (chipNumber == PCA9685_CHIP_1)
+	{
+		steps = (targetLength / _calculatedResolution1)+ 0.5 ;
+	}
+	else if (chipNumber == PCA9685_CHIP_2)
+	{
+		steps = (targetLength / _calculatedResolution2)+ 0.5;
+	}
+	return steps;
+}
+
+float FuzzyServoBoard::getCalculatedResolution(uint8_t chipNumber)
+{
+	if (chipNumber == PCA9685_CHIP_1)
+	{
+		return _calculatedResolution1;
+	}
+	else if (chipNumber == PCA9685_CHIP_2)
+	{
+		return _calculatedResolution2;
+	}
+}
+
+void FuzzyServoBoard::setPWM(uint8_t servoChannel, uint16_t targetLength)
+{
+	#ifdef VERBOSE_SERIAL_DEBUG
+	Serial.print("Target ");
+	Serial.print(targetLength);
 	Serial.print(" ");
-	#endif //SERIAL_DEBUG
-	uint16_t adjustedLength = commandedLength;
+	#endif //VERBOSE_SERIAL_DEBUG
+	//uint16_t adjustedLength = commandedLength;
 
 	//perform frequency adjustment
+	uint16_t calbratedSteps;
+	uint16_t calculatedLength;
 
-	if (adjustedLength < MIN_PWM_LENGTH) adjustedLength = MIN_PWM_LENGTH;
-	if (adjustedLength > MAX_PWM_LENGTH) adjustedLength = MAX_PWM_LENGTH;
-	lastLength[servoChannel - 1] = adjustedLength;
+	if (targetLength < MIN_PWM_LENGTH) targetLength = MIN_PWM_LENGTH;
+	if (targetLength > MAX_PWM_LENGTH) targetLength = MAX_PWM_LENGTH;
+	
+	lastLength[servoChannel - 1] = targetLength;
 
 	if (servoChannel >= 1 && servoChannel <= 16)
 	{
-		adjustedLength += getAdjustValue(1, adjustedLength);
+		//adjustedLength += getAdjustValue(1, adjustedLength);
+		calbratedSteps = getCalbratedSteps(PCA9685_CHIP_1, targetLength);
+		calculatedLength = (float)calbratedSteps * _calculatedResolution1 + 0.5;
 	}
 	else if (servoChannel <= POPULATED_CHANNEL_NUMBER)
 	{
-		adjustedLength += getAdjustValue(2, adjustedLength);
+		//adjustedLength += getAdjustValue(2, adjustedLength);
+		calbratedSteps = getCalbratedSteps(PCA9685_CHIP_2, targetLength);
+		calculatedLength = (float)calbratedSteps * _calculatedResolution2 + 0.5;
 	}
 
-	_setPWM(servoChannel, 0, adjustedLength);
+	#ifdef VERBOSE_SERIAL_DEBUG
+	Serial.print("Calculated = ");
+	Serial.print(calculatedLength);
+	Serial.print(" ");
+	#endif //VERBOSE_SERIAL_DEBUG
+
+	_setPWM(servoChannel, 0, calbratedSteps);
 }
 
 void FuzzyServoBoard::_setPWM(uint8_t servoChannel, uint16_t on, uint16_t off)
@@ -126,14 +218,14 @@ void FuzzyServoBoard::_setPWM(uint8_t servoChannel, uint16_t on, uint16_t off)
 		Wire.write(off >> 8);
 		Wire.endTransmission();
 	}
-	#ifdef SERIAL_DEBUG
+	#ifdef VERBOSE_SERIAL_DEBUG
 	Serial.print("Channel ");
 	Serial.print(servoChannel);
 	Serial.print(" on ");
 	Serial.print(on);
 	Serial.print(" off ");
 	Serial.println(off);
-	#endif //SERIAL_DEBUG
+	#endif //VERBOSE_SERIAL_DEBUG
 }
 
 void FuzzyServoBoard::reset()
@@ -258,26 +350,26 @@ void FuzzyServoBoard::setOutputAll(bool value)
 	}
 }
 
-void FuzzyServoBoard::setPWMAll(uint16_t length)
+void FuzzyServoBoard::setPWMAll(uint16_t targetLength)
 {
-	if (length < MIN_PWM_LENGTH) length = MIN_PWM_LENGTH;
-	if (length > MAX_PWM_LENGTH) length = MAX_PWM_LENGTH;
-	_setPWMAll(0, length);
+	if (targetLength < MIN_PWM_LENGTH) targetLength = MIN_PWM_LENGTH;
+	if (targetLength > MAX_PWM_LENGTH) targetLength = MAX_PWM_LENGTH;
+	_setPWMAll(0, targetLength);
 }
 
 void FuzzyServoBoard::_setPWMAll(uint16_t on, uint16_t off)
 {
 	/*sequenced writing method*/
-	#ifdef SERIAL_DEBUG
+	#ifdef SERIAL_VERBOSE_SERIAL_DEBUGDEBUG
 	Serial.print("Set PWM all ");
 	Serial.print(on);
 	Serial.print(" ");
 	Serial.println(off);
-	#endif //SERIAL_DEBUG
+	#endif //VERBOSE_SERIAL_DEBUG
 	for (uint8_t servoChannel = 1; servoChannel < 17; servoChannel++)
 	{
 		uint16_t channelOn = on + channelOffset[servoChannel - 1];
-		uint16_t channelOff = off + channelOffset[servoChannel - 1] + getAdjustValue(1, off - on);
+		uint16_t channelOff = channelOffset[servoChannel - 1] + getCalbratedSteps(PCA9685_CHIP_1, off);
 		Wire.beginTransmission(_i2cAddress1);
 		Wire.write(LED0_ON_L + 4 * (servoChannel - 1));
 		Wire.write(channelOn);
@@ -286,19 +378,19 @@ void FuzzyServoBoard::_setPWMAll(uint16_t on, uint16_t off)
 		Wire.write(channelOff >> 8);
 		Wire.endTransmission();
 		lastLength[servoChannel - 1] = channelOff - channelOn;
-		#ifdef SERIAL_DEBUG
+		#ifdef VERBOSE_SERIAL_DEBUG
 		Serial.print("Set channel ");
 		Serial.print(servoChannel);
 		Serial.print(" ");
 		Serial.print(channelOn);
 		Serial.print(" ");
 		Serial.println(channelOff);
-		#endif //SERIAL_DEBUG
+		#endif //VERBOSE_SERIAL_DEBUG
 	}
 	for (uint8_t servoChannel = 17; servoChannel < POPULATED_CHANNEL_NUMBER + 1; servoChannel++)
 	{
 		uint16_t channelOn = on + channelOffset[servoChannel - 1];
-		uint16_t channelOff = off + channelOffset[servoChannel - 1] + getAdjustValue(2, off - on);
+		uint16_t channelOff = channelOffset[servoChannel - 1] + getCalbratedSteps(PCA9685_CHIP_2, off);
 		Wire.beginTransmission(_i2cAddress2);
 		Wire.write(LED0_ON_L + 4 * (servoChannel - 17));
 		Wire.write(channelOn);
@@ -307,14 +399,14 @@ void FuzzyServoBoard::_setPWMAll(uint16_t on, uint16_t off)
 		Wire.write(channelOff >> 8);
 		Wire.endTransmission();
 		lastLength[servoChannel - 1] = channelOff - channelOn;
-		#ifdef SERIAL_DEBUG
+		#ifdef VERBOSE_SERIAL_DEBUG
 		Serial.print("Set channel ");
 		Serial.print(servoChannel);
 		Serial.print(" ");
 		Serial.print(channelOn);
 		Serial.print(" ");
 		Serial.println(channelOff); 
-		#endif //SERIAL_DEBUG
+		#endif //VERBOSE_SERIAL_DEBUG
 	}
 
 	/* all call method. not used because of output staggering.
@@ -342,28 +434,6 @@ void FuzzyServoBoard::setChannelStaggering(bool value)
 			channelOffset[index] = 0;
 		}
 	}
-}
-
-int8_t FuzzyServoBoard::getAdjustValue(uint8_t chipNumber, uint16_t length)
-{
-	int8_t returnValue;
-	int32_t frequencyAdjustValue;
-
-	if (chipNumber == 1)
-	{
-		frequencyAdjustValue = (int32_t)((int32_t)(length)* pulseWidthCorrection1) / 10000;
-	}
-	else if (chipNumber == 2)
-	{
-		frequencyAdjustValue = (int32_t)((int32_t)(length)* pulseWidthCorrection2) / 10000;
-	}
-
-
-	int32_t temperatureAdjustValue = (int32_t)((int32_t)(deltaTemperature)* length* temperatureCorrection / 30) / 10000;
-
-	returnValue = frequencyAdjustValue + temperatureAdjustValue;
-
-	return returnValue;
 }
 
 void FuzzyServoBoard::setPrescale(uint8_t value1, uint8_t value2)
@@ -420,12 +490,6 @@ float FuzzyServoBoard::getNominalUpdateFrequency(uint32_t clockFrequency, uint8_
 	float nominalUpdateFrequency;
 	nominalUpdateFrequency = (float)clockFrequency / (float)(((uint32_t)(prescale+1)) << 12);
 	return nominalUpdateFrequency;
-}
-
-void FuzzyServoBoard::setPulseWidthCorrection(int8_t value1, int8_t value2)
-{
-	pulseWidthCorrection1 = value1;
-	pulseWidthCorrection2 = value2;
 }
 
 void FuzzyServoBoard::setEnvironmentTemperature(uint8_t degreesInCelsius)

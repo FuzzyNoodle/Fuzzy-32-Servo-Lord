@@ -15,6 +15,8 @@ void setup()
 	Serial.begin(115200);
 	Serial.println("Fuzzy 32 Channel Servo Board");
 	Serial.println("*** Control Servo Via Potentiometer *** example started.");
+	
+	//For oscilloscope signal testing
 	pinMode(9, OUTPUT);
 	analogWrite(9, 127);
 
@@ -22,31 +24,38 @@ void setup()
 	digitalWrite(POWER_MOSFET_PIN, HIGH);
 
 	Wire.begin();
-	Wire.setClock(400000); //set i2c frequency to 400k hz
+	Wire.setClock(400000); //Set i2c frequency to 400 kHz.
 
-	ServoController.init(); //required
+
+	ServoController.begin(); //required
 	ServoController.setClockFrequency(27102244, 27380892);
-	ServoController.setUpdateFrequency(50);
+	ServoController.setUpdateFrequency(100);
 
 
-	//ServoController.setPrescale(121);
-	//ServoController.setPrescale(0x79,0x79);//may be required, measured value. Default value is 0x1A for both chips.
-	//ServoController.setPulseWidthCorrection(4, -53);//required, values need to be measured by an oscilloscope. It differs from chip to chip. 
 
 
 	//ServoController.setEnvironmentTemperature(25); //optional, used for temperature correction.
-
+	Serial.println("Setup completed, starting POT reading.");
 }
 
 void loop()
 {
-	uint16_t readValue = analogRead(MANUAL_POT_PIN);
-	uint16_t commandedPWMValue = map(readValue, 0, 1023, 700, 2300);
-	//ServoController.setPWMAll(commandedPWMValue);
-	ServoController.setPWM(1, commandedPWMValue);
-	ServoController.setPWM(2, commandedPWMValue);
-	ServoController.setPWM(17, commandedPWMValue);
-	delay(100);
+	uint32_t readValue = 0;
+	//Several samples are read to average out the fluctuations in analog reading.
+	//Each analogRead() takes about 116 microseconds on 16 MHz Arduino UNO.
+	for (uint8_t i = 0; i < 4 ; i++)
+	{
+		readValue += analogRead(MANUAL_POT_PIN); 
+	}
+	readValue >>= 2;
+
+
+	uint16_t targetPWMValue = map(readValue, 0, 1023, 2300, 700);
+	//ServoController.setPWMAll(targetPWMValue);
+	ServoController.setPWM(1, targetPWMValue);
+	ServoController.setPWM(2, targetPWMValue);
+	ServoController.setPWM(17, targetPWMValue);
+	//delay(5);
 }
 
 

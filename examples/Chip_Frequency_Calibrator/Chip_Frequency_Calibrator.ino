@@ -52,7 +52,7 @@ void setup()
 	Wire.begin();
 	Wire.setClock(400000); //set i2c frequency to 400kHz
 
-	ServoController.init(); //required
+	ServoController.begin(); //required
 
 	pinMode(POWER_MOSFET_PIN, OUTPUT);
 	digitalWrite(POWER_MOSFET_PIN, HIGH);
