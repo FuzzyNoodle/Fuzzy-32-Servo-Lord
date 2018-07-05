@@ -35,6 +35,12 @@ void FuzzyServoBoard::begin(uint32_t clock1, uint32_t clock2, uint32_t targetUpd
 		lastLength[servoChannel - 1] = DEFAULT_SERVO_PWM_LENGTH;
 	}
 
+	//Initialize temperature correction array
+	for (uint8_t i = 0; i < TEMPERATURE_CORRECTION_POINTS; i++)
+	{
+		temperatureCorrectionArray[i] = 0;
+	}
+
 	setOutputAll(false);
 
 	#ifdef SERIAL_DEBUG
@@ -169,23 +175,37 @@ void FuzzyServoBoard::setPWM(uint8_t servoChannel, uint16_t targetLength)
 	
 	lastLength[servoChannel - 1] = targetLength;
 
+	//Perform temperature correction
+	uint16_t temperatureCorrectedTargetLength = targetLength + temperatureCorrectionArray[(targetLength - MIN_PWM_LENGTH) >>7];
+	
+
 	if (servoChannel >= 1 && servoChannel <= 16)
 	{
-		//adjustedLength += getAdjustValue(1, adjustedLength);
-		calbratedSteps = getCalbratedSteps(PCA9685_CHIP_1, targetLength);
+		calbratedSteps = getCalbratedSteps(PCA9685_CHIP_1, temperatureCorrectedTargetLength);
+		#ifdef VERBOSE_SERIAL_DEBUG
 		calculatedLength = (float)calbratedSteps * _calculatedResolution1 + 0.5;
+		#endif //VERBOSE_SERIAL_DEBUG
 	}
 	else if (servoChannel <= POPULATED_CHANNEL_NUMBER)
 	{
-		//adjustedLength += getAdjustValue(2, adjustedLength);
-		calbratedSteps = getCalbratedSteps(PCA9685_CHIP_2, targetLength);
+		calbratedSteps = getCalbratedSteps(PCA9685_CHIP_2, temperatureCorrectedTargetLength);
+		#ifdef VERBOSE_SERIAL_DEBUG
 		calculatedLength = (float)calbratedSteps * _calculatedResolution2 + 0.5;
+		#endif //VERBOSE_SERIAL_DEBUG
 	}
 
+	
+
+
 	#ifdef VERBOSE_SERIAL_DEBUG
+	Serial.print("Temp corrected = ");
+	Serial.print(temperatureCorrectedTargetLength);
+	Serial.print(" ");
 	Serial.print("Calculated = ");
 	Serial.print(calculatedLength);
 	Serial.print(" ");
+
+
 	#endif //VERBOSE_SERIAL_DEBUG
 
 	_setPWM(servoChannel, 0, calbratedSteps);
@@ -492,8 +512,22 @@ float FuzzyServoBoard::getNominalUpdateFrequency(uint32_t clockFrequency, uint8_
 	return nominalUpdateFrequency;
 }
 
-void FuzzyServoBoard::setEnvironmentTemperature(uint8_t degreesInCelsius)
+void FuzzyServoBoard::setEnvironmentTemperatureCelsius(int8_t degreesInCelsius)
 {
 	deltaTemperature = degreesInCelsius - NOMINATED_ROOM_TEMPERATURE;
+	#ifdef VERBOSE_SERIAL_DEBUG
+	Serial.println("Temperature correction at each checkpoint:");
+	#endif //VERBOSE_SERIAL_DEBUG
+	//Initialize temperature correction array
+	for (uint8_t i = 0; i < TEMPERATURE_CORRECTION_POINTS; i++)
+	{
+		uint16_t targetPWMLength = MIN_PWM_LENGTH +  i * TEMPERATURE_CORRECTION_STEP;
+		temperatureCorrectionArray[i] = (float)deltaTemperature * TEMPERATURE_CORRECTION_COEFFICIENT* (float)targetPWMLength;
+		#ifdef VERBOSE_SERIAL_DEBUG
+		Serial.print(targetPWMLength);
+		Serial.print(" ");
+		Serial.println(temperatureCorrectionArray[i]);
+		#endif //VERBOSE_SERIAL_DEBUG
+	}
 }
 

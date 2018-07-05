@@ -31,7 +31,9 @@ void setup()
 	ServoController.setClockFrequency(27102244, 27380892);
 	ServoController.setUpdateFrequency(100);
 
-
+	ServoController.setEnvironmentTemperatureCelsius(25);
+	ServoController.setPWM(1, 1500);
+	while (1);
 
 
 	//ServoController.setEnvironmentTemperature(25); //optional, used for temperature correction.
