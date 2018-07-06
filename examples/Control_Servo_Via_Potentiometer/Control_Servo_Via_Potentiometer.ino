@@ -88,11 +88,13 @@ void loop()
 
 
 	uint16_t targetPWMValue = map(readValue, 0, 1023, 2300, 700);
-	//ServoController.setPWMAll(targetPWMValue);
-	ServoController.setPWM(1, targetPWMValue);
-	ServoController.setPWM(2, targetPWMValue);
-	ServoController.setPWM(17, targetPWMValue);
-	//delay(5);
+
+	ServoController.setPWMAll(targetPWMValue);
+
+	//Alternatively, users may command individual servo.
+	//ServoController.setPWM(1, targetPWMValue);
+	//ServoController.setPWM(2, targetPWMValue);
+	
 }
 
 
