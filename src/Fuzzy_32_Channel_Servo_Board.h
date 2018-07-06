@@ -16,7 +16,7 @@
 
 /*Debug switch. */
 #define SERIAL_DEBUG //Enable the SERIAL_DEBUG to output debug messages other than servo position setting.
-#define VERBOSE_SERIAL_DEBUG //This debug switch enables debug messages for servo position setting
+//#define VERBOSE_SERIAL_DEBUG //This debug switch enables debug messages for servo position setting
 
 //chip registers and default values
 #define PCA9685_CHIP_1 1
@@ -42,18 +42,18 @@
 #define LED0_OFF_H 0x09
 #define LED_FULL_OFF_L 0x00
 #define LED_FULL_OFF_H 0x10
+
 #define POPULATED_CHANNEL_NUMBER 32
 #define MIN_PWM_LENGTH 500
 #define MAX_PWM_LENGTH 2500
 #define DEFAULT_CHANNEL_STAGGERING false
-#define CHANNEL_OFFSET_STEP 100 //in us. This value should not extend the last channel off timing to exceed the 4095 limit.
+#define CHANNEL_OFFSET_STEP 50 //in us. This value should not extend the last channel off timing to exceed the 4095 limit.
 #define NOMINATED_ROOM_TEMPERATURE 25
 #define DEFAULT_TEMPERATURE_CORRECTION 40 //per 30 degrees change in temperature
 #define DEFAULT_SERVO_PWM_LENGTH 1500 
 #define NOMINAL_CLOCK_FREQUENCY 25000000
 #define DEFAULT_UPDATE_FREQUENCY 50
 #define TEMPERATURE_CORRECTION_COEFFICIENT 0.00020 
-
 #define TEMPERATURE_CORRECTION_STEP 128
 #define TEMPERATURE_CORRECTION_POINTS ((MAX_PWM_LENGTH-MIN_PWM_LENGTH)/TEMPERATURE_CORRECTION_STEP)
 
@@ -68,16 +68,18 @@ class FuzzyServoBoard
 	public:
 		FuzzyServoBoard();
 		void begin();  //required function call to initialize the board
-		void begin(uint32_t clock1, uint32_t clock2, uint32_t targetUpdateFrequency); //use clock frequency as input parameter. clock frequency requires measurement, from calibration sketch.
-		void setPWM(uint8_t servoChannel, uint16_t targetLength);
-		void setOutputAll(bool value);
-		void setOutput(uint8_t servoChannel, bool value); //set output to on or off
-		void setPWMAll(uint16_t length);
-		void setPrescale(uint8_t value1, uint8_t value2); //write to both chips
-		void setPrescale(uint8_t value); //write to both chips using the same value
-		uint8_t getPrescale(uint8_t chipNumber);
+		void begin(uint32_t clock1, uint32_t clock2, uint32_t targetUpdateFrequency); //Use clock and update frequency as input parameter. Clock frequency requires measurement, from calibration sketch.
+		void setPWM(uint8_t servoChannel, uint16_t targetLength); //Command a servo position.
+		void setOutputAll(bool value);//Set all output signals to on or off. Any PWM input command will turn the signal on. If signal are set on after an off command, output will set to last position.
+		void setOutput(uint8_t servoChannel, bool value); //Set output signal to on or off. Any PWM input command will turn the signal on. 
+		void setPWMAll(uint16_t length); //Set all channels to the command target PWM position.
+		void setPrescale(uint8_t value1, uint8_t value2); //Write to both chips
+		void setPrescale(uint8_t value); //Write to both chips using the same value
+		uint8_t getPrescale(uint8_t chipNumber); //Manually set the prescale.
 		void setEnvironmentTemperatureCelsius(int8_t degreesInCelsius); //set current temperature for temperature correction
 		void setChannelStaggering(bool value); //if set true, output channels will stagger (phase shift) by the amout of time (us) defined in CHANNEL_OFFSET_STEP
+		
+		
 		float getNominalUpdateFrequency(uint32_t clockFrequency, uint8_t prescale);
 		void setClockFrequency(uint32_t clock1, uint32_t clock2);
 		void setUpdateFrequency(float targetUpdateFrequency1, float targetUpdateFrequency2);
@@ -105,8 +107,9 @@ class FuzzyServoBoard
 		void _setPWMAll(uint16_t on, uint16_t off);
 		uint16_t channelOffset[POPULATED_CHANNEL_NUMBER]; //array starts from index 0, servo channel starts from index 1
 
-		/* The RC oscillator is affected by temperature, normally the clock frequency increases
-		when the temperature increases. The measured coefficient is about 0.02% increase 
+		/* 
+		The RC oscillator is affected by temperature, normally the clock frequency increases
+		when the temperature increases. The measured coefficient is about 0.02% increase
 		per degree C increase. An int array is used to reduce calculation time during run time.
 		This temperature correction method is not very accurate, as the temperature control method is inaccurate during measurement.
 		However, the coefficient measured on the PCA9685 chip is somewhat similar to ATMEGA internal RC oscillator datasheet value.

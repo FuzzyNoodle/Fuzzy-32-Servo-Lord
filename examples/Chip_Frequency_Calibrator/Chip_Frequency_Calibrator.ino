@@ -22,6 +22,19 @@ for each chip should be good enough for different servos.
 */
 
 
+/*
+Wiring
+
+Arduino PIN                         Servo Board Pin
+5V                                  5V
+GND                                 GND
+SDA                                 SDA (A4 for UNO)
+SCL                                 SCL (A5 for UNO)
+PIN                                 POWER_MOSFET_PIN (5 in example)
+CHIP_1_INTERRUPT_INPUT_PIN (2)      CHIP_1_FEEDBACK_CHANNEL (16)
+
+*/
+
 #define POWER_MOSFET_PIN  5
 #define CHIP_1_FEEDBACK_CHANNEL 16
 #define CHIP_2_FEEDBACK_CHANNEL 32
@@ -33,6 +46,8 @@ for each chip should be good enough for different servos.
 #define CHIP_1_OSCILLOSCOPE_CHANNEL 2
 #define CHIP_2_OSCILLOSCOPE_CHANNEL 18
 #define NUMBER_OF_SAMPLES 500
+
+//Create the servo controller object to control up to 32 servos.
 FuzzyServoBoard ServoController;
 
 volatile uint32_t chipPulseCounter = 0;
@@ -46,30 +61,25 @@ void setup()
 {
 	Serial.begin(115200);
 	Serial.println("Fuzzy 32 Channel Servo Board");
-	Serial.println("*** Chip Frequency Calibrator *** example started.");
+	Serial.println("[Chip Frequency Calibrator] example started.");
 
 
 	Wire.begin();
 	Wire.setClock(400000); //set i2c frequency to 400kHz
 
-	ServoController.begin(); //required
+	//The begin() method is required to initialize the servo controller object.
+	ServoController.begin();
 
+	//Enable the power MOSFET on the servo board.
 	pinMode(POWER_MOSFET_PIN, OUTPUT);
 	digitalWrite(POWER_MOSFET_PIN, HIGH);
 
-	//Trigger oscilloscope
-	pinMode(4, OUTPUT);
-	digitalWrite(4, HIGH);
-
-	//For oscilloscope signal testing
-	pinMode(9, OUTPUT);
-	analogWrite(9, 127);
 
 	/*
 	Modify this value (targetUpdateFrequency) to desired update frequency.
 	Achievable value range is 24 to 1526 Hz. according to the datasheet.
-	A classic servo runs at 50 Hz, however, the resolution is around 4.88us at this update frequency.
-	Increases the update frequency reduces both the response time and resolution, however, if 
+	A classic servo runs at 50 Hz, and the resolution is around 4.88us at this update frequency.
+	Increase the update frequency reduce both the response time and resolution, however, if 
 	the update frequency goes too high, the servo might shake or stop working. 
 	
 	Approximate values for some update frequencies:
@@ -94,6 +104,7 @@ void setup()
 	
 
 	ServoController.setPrescale(PCA9685_DEFAULT_PRESCALE_VALUE);
+	ServoController.setPWM(CHIP_1_FEEDBACK_CHANNEL, 1500);
 	Serial.println("Running first pass using default prescale...");
 	float clock1 = getCalculatedClockFrequency(PCA9685_CHIP_1, NUMBER_OF_SAMPLES);
 	uint8_t prescale1 = getCalculatedPrescale(clock1, targetUpdateFrequency);
@@ -113,6 +124,7 @@ void setup()
 
 
 	ServoController.setPrescale(PCA9685_DEFAULT_PRESCALE_VALUE);
+	ServoController.setPWM(CHIP_2_FEEDBACK_CHANNEL, 1500);
 	Serial.println("Running first pass using default prescale...");
 	float clock2 = getCalculatedClockFrequency(PCA9685_CHIP_2, NUMBER_OF_SAMPLES);
 	uint8_t prescale2 = getCalculatedPrescale(clock2, targetUpdateFrequency);
@@ -130,6 +142,8 @@ void setup()
 	ServoController.setPrescale(prescale2);
 	clock2 = getCalculatedClockFrequency(PCA9685_CHIP_2, NUMBER_OF_SAMPLES);
 
+	ServoController.setOutputAll(false);
+
 	// Output final results for two PCA9685 chips
 	Serial.println("Now printing final results...");
 	Serial.println("*******************************************");
@@ -141,9 +155,6 @@ void setup()
 	Serial.println("*******************************************");
 	Serial.println("Sketch ended.");
 
-	//Trigger oscilloscope
-	delay(50);
-	digitalWrite(4, LOW);
 }
 
 void loop()
@@ -153,10 +164,6 @@ void loop()
 
 }
 
-uint8_t getNearestPrescale(float calculatedClockFrequency, float targetUpdateFrequency)
-{
-	
-}
 
 float getUpdateFrequencyFromResolution(float targetResolution)
 {
@@ -249,10 +256,6 @@ float getCalculatedClockFrequency(uint8_t chipID,uint32_t samples)
 	Serial.println(period);
 	Serial.print("Measured update frequency = ");
 	Serial.println(measuredUpdateFrequency);
-	//Serial.print("Nominal update frequency = ");
-	//Serial.println(nominalUpdateFrequency);
-	//Serial.print("Nominal clock frequency = ");
-	//Serial.println(NOMINAL_CLOCK_FREQUENCY);
 	Serial.print("Calculated clock frequency = ");
 	Serial.println(calculatedClockFrequency);
 	Serial.print("Frequency error = ");

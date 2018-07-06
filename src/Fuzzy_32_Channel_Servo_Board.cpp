@@ -41,6 +41,11 @@ void FuzzyServoBoard::begin(uint32_t clock1, uint32_t clock2, uint32_t targetUpd
 		temperatureCorrectionArray[i] = 0;
 	}
 
+	_clock1 = clock1;
+	_clock2 = clock2;
+
+	setUpdateFrequency(targetUpdateFrequency);
+
 	setOutputAll(false);
 
 	#ifdef SERIAL_DEBUG
@@ -314,6 +319,11 @@ void FuzzyServoBoard::setOutput(uint8_t servoChannel, bool value)
 		if (value == true)
 		{
 			setPWM(servoChannel, lastLength[servoChannel - 1]);
+			#ifdef SERIAL_DEBUG
+			Serial.print("Set servo channel ");
+			Serial.print(servoChannel);
+			Serial.println(" output on");
+			#endif //SERIAL_DEBUG
 		}
 		else // (value == false)
 		{
@@ -374,7 +384,11 @@ void FuzzyServoBoard::setPWMAll(uint16_t targetLength)
 {
 	if (targetLength < MIN_PWM_LENGTH) targetLength = MIN_PWM_LENGTH;
 	if (targetLength > MAX_PWM_LENGTH) targetLength = MAX_PWM_LENGTH;
-	_setPWMAll(0, targetLength);
+
+	//Perform temperature correction
+	uint16_t temperatureCorrectedTargetLength = targetLength + temperatureCorrectionArray[(targetLength - MIN_PWM_LENGTH) >> 7];
+
+	_setPWMAll(0, temperatureCorrectedTargetLength);
 }
 
 void FuzzyServoBoard::_setPWMAll(uint16_t on, uint16_t off)
