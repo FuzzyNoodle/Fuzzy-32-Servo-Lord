@@ -37,7 +37,7 @@ This example demonstrates how to command servo positions using a 3-pin potentiom
 ##### - Chip Frequency Calibrator
 This example calibrates the PC9685 core frequency **using your own arduino board**, which is clocked by external crystal oscillators that are far more accurate (typical 0.002%) than internal RC oscillators.
 
-Just connect two extra feedback wires and run the sketch. Calibration progress will be shown on the Serial Window. After one-time calibration, the output signal may reach +- 1 _us_ (microsecond) accuracy at higher update frequency (~150 Hz or above, see notes below).
+Just connect two extra feedback wires and run the sketch. Calibration progress will be shown on the Serial Window ([example](extras/SerialOutput.txt)). After one-time calibration, the output signal may reach +- 1 _us_ (microsecond) accuracy at higher update frequency (~150 Hz or above, see notes below).
 
 #### Update Frequency and Resolution
 
