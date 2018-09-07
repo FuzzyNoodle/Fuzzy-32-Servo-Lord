@@ -1,5 +1,5 @@
 ### Fuzzy-32-Servo-Lord
-This is a arduino library for [Fuzzy 32-Channel Servo Controller](https://www.tindie.com/products/FuzzyStudio/32-channel-servo-controller-pca9685-for-arduino/) based on two PCA9685 ICs. That is, the "**dual**" version of the original [Adafruit servo board](https://www.adafruit.com/product/815).
+This is a arduino library for [Fuzzy 32-Channel Servo Controller](https://www.tindie.com/products/FuzzyStudio/32-channel-servo-controller-pca9685-for-arduino/) based on two PCA9685 ICs. That is, the "**dual**" version of the original [Adafruit servo board](https://www.adafruit.com/product/815) with some additional features.
 
 ![Front](extras/image/front.jpg)
 
