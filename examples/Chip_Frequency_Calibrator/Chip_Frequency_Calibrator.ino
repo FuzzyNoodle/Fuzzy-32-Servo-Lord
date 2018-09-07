@@ -12,7 +12,7 @@ The calculated clock frequency is then used as the calibrator value for future u
 
 This sketch used the clock source from user's arduino control board 
 (ex. UNO, NANO, MEGA2560, ZERO, etc...). Therefore the accuracy is limited by 
-the on-board crystal oscillator which has a typical value of 0.2% ~ 0.5%.
+the on-board crystal oscillator which has a typical value of 0.002% ~ 0.005%. (20~50 ppm)
 
 
 The measured difference of core frequency using different prescale (thus different 
